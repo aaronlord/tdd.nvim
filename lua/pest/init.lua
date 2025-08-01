@@ -48,6 +48,20 @@ M.jump = function()
     end
 end
 
+M.when_test = function(fn)
+    if not files.project_root() then
+        return
+    end
+
+    local current_file = files.current_file()
+
+    if not files.is_test(current_file) then
+        return
+    end
+
+    fn(current_file)
+end
+
 M.setup = function(opts)
     opts = opts or {}
 end
