@@ -239,14 +239,17 @@ M.select_from_files = function(files, create_if_not_exists)
         return
     end
 
-    -- only allow one choice
+    table.sort(files, function(a, b)
+        return M.exists(a) and not M.exists(b)
+    end)
+
     vim.ui.select(
         files,
         {
             prompt = 'Jump to a file',
             format_item = function(item)
                 -- Signify files that do not exist with a *
-                return M.exists(item) and item or item .. ' *'
+                return (M.exists(item) and '  ' or '* ') .. item
             end
         },
         function(selected)
@@ -254,7 +257,7 @@ M.select_from_files = function(files, create_if_not_exists)
                 return
             end
 
-            M.open(selected:gsub(' *$', ''), create_if_not_exists)
+            M.open(selected:gsub('^* ', ''), create_if_not_exists)
         end
     )
 end
