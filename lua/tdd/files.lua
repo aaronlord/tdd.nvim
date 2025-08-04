@@ -1,4 +1,4 @@
-local class = require('pest.class')
+local class = require('tdd.class')
 
 local function pluralize(word)
     if word == nil

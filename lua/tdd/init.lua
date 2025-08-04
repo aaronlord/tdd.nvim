@@ -1,4 +1,4 @@
-local files = require('pest.files')
+local files = require('tdd.files')
 
 local M = {}
 
