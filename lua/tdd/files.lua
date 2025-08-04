@@ -122,12 +122,6 @@ M.is_sut = function(file)
     return not M.is_test(file)
 end
 
-M.is_controller = function(file)
-    return file:find("Http")
-        and file:find("Controllers")
-        and file:match('%Controller.php$')
-end
-
 M.exists = function(file)
     if not file or file == '' then
         return false
@@ -141,18 +135,6 @@ M.exists = function(file)
     return vim.fn.filereadable(M.project_root() .. '/' .. file) == 1
 end
 
-local clean_controller_path = function(path)
-    local s = path:match("Controllers/(.+)")
-
-    if not s then return nil end
-
-    s = s:gsub("%.php$", "")
-
-    s = s:gsub("Controller$", "")
-
-    return s
-end
-
 M.get_tests = function(sut_file)
     local files = {}
 
@@ -160,55 +142,17 @@ M.get_tests = function(sut_file)
         return files
     end
 
-    if M.is_controller(sut_file) then
-        local methods = class.public_methods(M.project_root() .. '/' .. sut_file)
+    -- Remove the first part of the path, which is typically 'app',
+    -- and suffix 'Test' to the filename.
+    local test_file = sut_file
+        :sub(sut_file:find('/') + 1)
+        :gsub('%.php$', 'Test.php')
 
-        for _, method in pairs(methods) do
-            -- Just get the file name, without the path and extension
-            local combined = clean_controller_path(sut_file)
-
-            if not combined or combined == '' then
-                break
-            end
-
-            method = method:gsub('^%l', string.upper)
-
-            local parts = {}
-
-            local count = nil
-
-            for part, i in combined:gmatch("[^/]+") do
-                count = i
-
-                table.insert(parts, part)
-            end
-
-            table.insert(parts, count)
-
-            local last_part = parts[#parts]
-
-            table.remove(parts, #parts)
-
-            for i = 1, #parts do
-                parts[i] = pluralize(parts[i])
-            end
-
-            if method == '__invoke' then
-                table.insert(parts, last_part)
-            else
-                table.insert(parts, pluralize(last_part))
-                table.insert(parts, method)
-            end
-
-            table.insert(files, 'tests/Http/' .. table.concat(parts, '/') .. 'Test.php')
-        end
-    else
-        -- Remove the first part of the path, which is typically 'app'
-        local test_file = sut_file:sub(sut_file:find('/') + 1):gsub('%.php$', 'Test.php')
-
-        table.insert(files, 'tests/Unit/' .. test_file)
-        table.insert(files, 'tests/Feature/' .. test_file)
-    end
+    table.insert(files, 'tests/Unit/' .. test_file)
+    table.insert(files, 'tests/Feature/' .. test_file)
+    table.insert(files, 'tests/Http/' .. test_file)
+    table.insert(files, 'tests/Console/' .. test_file)
+    table.insert(files, 'tests/Browser/' .. test_file)
 
     return files
 end
