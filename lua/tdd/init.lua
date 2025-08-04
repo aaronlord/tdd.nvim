@@ -2,7 +2,9 @@ local files = require('tdd.files')
 
 local M = {}
 
-M.jump_to_test = function()
+M.jump_to_test = function(open_only)
+    open_only = open_only or false
+
     if not files.project_root() then
         return
     end
@@ -14,6 +16,18 @@ M.jump_to_test = function()
     end
 
     local test_files = files.get_tests(current_file)
+
+    if open_only == true then
+        -- filter out files that do not exsit
+        test_files = vim.tbl_filter(function(file)
+            return files.exists(file)
+        end, test_files)
+
+        if #test_files == 1 then
+            files.open(test_files[1], false)
+            return
+        end
+    end
 
     files.select_from_files(test_files, true)
 end
@@ -34,7 +48,9 @@ M.jump_to_sut = function()
     files.open(sut_file, false)
 end
 
-M.jump = function()
+M.jump = function(open_only)
+    open_only = open_only or false
+
     if not files.project_root() then
         return
     end
@@ -44,7 +60,7 @@ M.jump = function()
     if files.is_test(current_file) then
         M.jump_to_sut()
     else
-        M.jump_to_test()
+        M.jump_to_test(open_only)
     end
 end
 
