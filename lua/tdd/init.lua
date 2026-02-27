@@ -1,4 +1,5 @@
 local files = require('tdd.files')
+local config = require('tdd.config')
 
 local M = {}
 
@@ -75,11 +76,52 @@ M.when_test = function(fn)
         return
     end
 
-    fn(current_file)
+    fn(current_file, files.current_ft())
+end
+
+M.run_test_file = function()
+    if not files.project_root() then
+        return
+    end
+
+    local current_file = files.current_file()
+    local filetype = vim.bo.filetype
+
+    if not current_file or not files.is_test(current_file) then
+        vim.notify("Not in a test file", vim.log.levels.ERROR)
+        return
+    end
+
+    config.run_test(current_file, nil, nil, filetype)
+end
+
+M.run_test = function()
+    if not files.project_root() then
+        return
+    end
+
+    local current_file = files.current_file()
+    local filetype = vim.bo.filetype
+
+    if not current_file or not files.is_test(current_file) then
+        vim.notify("Not in a test file", vim.log.levels.ERROR)
+        return
+    end
+
+    local test_name, line_number = config.get_test_name(filetype)
+
+    if not test_name then
+        vim.notify("Could not find test name", vim.log.levels.ERROR)
+        return
+    end
+
+    config.run_test(current_file, test_name, line_number, filetype)
 end
 
 M.setup = function(opts)
     opts = opts or {}
+    config.setup(opts)
+    files.setup(opts)
 end
 
 return M

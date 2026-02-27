@@ -1,30 +1,5 @@
-local class = require('tdd.class')
-
-local function pluralize(word)
-    if word == nil
-        or word == ''
-        or word == 'Xhr'
-        or word == 'Api'
-        -- (or v1, v2, etc.)
-        or word:match("^v%d+$")
-    then
-        return word
-    end
-
-    local last_char = string.sub(word, -1)
-    local second_last_char = string.sub(word, -2, -2)
-
-    if last_char == "s" or last_char == "x" or last_char == "z" or
-        (last_char == "h" and (second_last_char == "c" or second_last_char == "s")) then
-        return word .. "es"
-    elseif last_char == "y" then
-        return string.sub(word, 1, -2) .. "ies"
-    else
-        return word .. "s"
-    end
-end
-
-local project_root = nil;
+local project_root = nil
+local config = require('tdd.config')
 
 local M = {}
 
@@ -33,7 +8,7 @@ M.project_root = function()
         return project_root
     end
 
-    local root_markers = { '.git', 'composer.json', 'artisan' }
+    local root_markers = { '.git', 'composer.json', 'package.json' }
     local path = vim.fn.expand('%:p:h')
 
     while path ~= '/' do
@@ -68,6 +43,10 @@ M.current_file = function()
     end
 
     return current_file:sub(#root + 2) -- +2 to remove the leading '/'
+end
+
+M.current_ft = function()
+    return vim.bo.filetype
 end
 
 M.create_file = function(file, content)
@@ -115,7 +94,11 @@ M.open = function(file, create_if_not_exists)
 end
 
 M.is_test = function(file)
-    return file:match('tests/.*%Test.php$')
+    local cfg = config.get_config_for_file(file)
+    if cfg.is_test then
+        return cfg.is_test(file)
+    end
+    return false
 end
 
 M.is_sut = function(file)
@@ -136,44 +119,22 @@ M.exists = function(file)
 end
 
 M.get_tests = function(sut_file)
-    local files = {}
-
-    if not sut_file or sut_file == '' or M.is_test(sut_file) then
-        return files
+    local cfg = config.get_config_for_file(sut_file)
+    if cfg.get_tests then
+        return cfg.get_tests(sut_file)
     end
-
-    -- Remove the first part of the path, which is typically 'app',
-    -- and suffix 'Test' to the filename.
-    local test_file = sut_file
-        :sub(sut_file:find('/') + 1)
-        :gsub('%.php$', 'Test.php')
-
-    table.insert(files, 'tests/Unit/' .. test_file)
-    table.insert(files, 'tests/Feature/' .. test_file)
-    table.insert(files, 'tests/Http/' .. test_file)
-    table.insert(files, 'tests/Console/' .. test_file)
-    table.insert(files, 'tests/Browser/' .. test_file)
-
-    return files
+    return {}
 end
 
 M.find_sut = function(test_file)
-    if not test_file
-        or test_file == ''
-        or not M.is_test(test_file)
-    then
-        return nil
+    local cfg = config.get_config_for_file(test_file)
+    if cfg.find_sut then
+        local sut = cfg.find_sut(test_file)
+        if sut and M.exists(sut) then
+            return sut
+        end
     end
-
-    local sut_file = test_file
-        :gsub('^tests/[^/]+/', 'app/')
-        :gsub('Test%.php$', '.php')
-
-    if not M.exists(sut_file) then
-        return nil
-    end
-
-    return sut_file
+    return nil
 end
 
 M.select_from_files = function(files, create_if_not_exists)
@@ -206,6 +167,8 @@ M.select_from_files = function(files, create_if_not_exists)
     )
 end
 
-M.find_sut('tests/Unit/Foo/Bar/ExampleTest.php')
+M.setup = function(opts)
+    -- Config setup is done in init.lua
+end
 
 return M
