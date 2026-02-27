@@ -242,7 +242,7 @@ local defaults = {
                     return files
                 end
 
-                local without_ext = sut_file:gsub('%.tsx?$', '')
+                local without_ext = sut_file:gsub('%.tsx?$', ''):gsub('%.vue$', '')
                 table.insert(files, without_ext .. '.test.ts')
                 table.insert(files, without_ext .. '.test.tsx')
                 table.insert(files, 'tests/' .. vim.fn.fnamemodify(without_ext, ':t') .. '.test.ts')
@@ -254,11 +254,20 @@ local defaults = {
                     return nil
                 end
 
-                local sut_file = test_file
+                -- Try .ts first, then .vue
+                local ts_file = test_file
                     :gsub('%.test%.tsx?$', '.ts')
                     :gsub('^tests/', 'src/')
-
-                return sut_file
+                
+                local vue_file = test_file
+                    :gsub('%.test%.tsx?$', '.vue')
+                    :gsub('^tests/', 'src/')
+                
+                -- Return vue if it exists, otherwise ts
+                if vim.fn.filereadable(vue_file) == 1 then
+                    return vue_file
+                end
+                return ts_file
             end,
             runner = 'vitest',
         },
